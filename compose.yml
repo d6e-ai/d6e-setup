@@ -1,0 +1,61 @@
+services:
+  api:
+    image: ghcr.io/d6e-ai/d6e-api:latest
+    restart: always
+    env_file: .env
+    ports:
+      - ${API_PORT:-8080}:8080
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      LISTEN_ADDR: 0.0.0.0:8080
+      D6E_CONTAINER_TOKEN_SECRET: ${D6E_CONTAINER_TOKEN_SECRET:?D6E_CONTAINER_TOKEN_SECRET is required}
+    volumes:
+      # Mount Docker socket for STF Docker runtime execution
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  mcp:
+    image: ghcr.io/d6e-ai/d6e-mcp:latest
+    restart: always
+    env_file: .env
+    ports:
+      - ${MCP_PORT:-8081}:8081
+    environment:
+      D6E_API_URL: ${D6E_API_URL:-http://api:8080}
+    command: ["http", "-b", "0.0.0.0:8081"]
+    depends_on:
+      - api
+
+  frontend:
+    image: ghcr.io/d6e-ai/d6e-frontend:latest
+    restart: always
+    env_file: .env
+    ports:
+      - ${FRONTEND_PORT:-3000}:3000
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      D6E_API_URL: ${D6E_API_URL:-http://api:8080}
+      D6E_MCP_SERVER_URL: ${D6E_MCP_SERVER_URL:-http://mcp:8081/mcp}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      LM_STUDIO_BASE_URL: ${LM_STUDIO_BASE_URL:-http://host.docker.internal:1234/v1}
+      BODY_SIZE_LIMIT: 15728640 # 15MB for file uploads (10MB file -> ~13.3MB base64)
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  caddy_data:
+  caddy_config:
