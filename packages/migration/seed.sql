@@ -39,8 +39,14 @@ CREATE TABLE IF NOT EXISTS "user" (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     email TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
+    can_create_workspace BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS allowed_email (
+    email TEXT PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS workspace (
@@ -221,6 +227,25 @@ CREATE TABLE IF NOT EXISTS frontend.chat_session (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- SaaS credential storage (encrypted OAuth tokens and API keys)
+CREATE TABLE IF NOT EXISTS frontend.saas_credential (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    workspace_id UUID NOT NULL,
+    provider TEXT NOT NULL,
+    auth_type TEXT NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    token_expires_at TIMESTAMPTZ,
+    api_token TEXT,
+    provider_config JSONB,
+    connected_at TIMESTAMPTZ,
+    last_used_at TIMESTAMPTZ,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(workspace_id, provider)
+);
+
 -- MCP server configurations
 CREATE TABLE IF NOT EXISTS frontend.mcp_server (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
@@ -229,6 +254,7 @@ CREATE TABLE IF NOT EXISTS frontend.mcp_server (
     url TEXT NOT NULL,
     headers JSONB,
     enabled BOOLEAN NOT NULL DEFAULT true,
+    saas_credential_id UUID REFERENCES frontend.saas_credential(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
