@@ -36,9 +36,9 @@ services:
       ORIGIN: ${ORIGIN:-http://localhost:3000}
       D6E_API_URL: ${D6E_API_URL:-http://api:8080}
       D6E_MCP_SERVER_URL: ${D6E_MCP_SERVER_URL:-http://mcp:8081/mcp}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      LM_STUDIO_BASE_URL: ${LM_STUDIO_BASE_URL:-http://host.docker.internal:1234/v1}
-      BODY_SIZE_LIMIT: 15728640 # 15MB for file uploads (10MB file -> ~13.3MB base64)
+      # OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # LM_STUDIO_BASE_URL: ${LM_STUDIO_BASE_URL:-http://host.docker.internal:1234/v1}
+      BODY_SIZE_LIMIT: 157286400 # 150MB for file uploads (100MB file -> ~133MB base64)
     depends_on:
       - api
 
