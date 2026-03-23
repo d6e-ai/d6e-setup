@@ -37,14 +37,29 @@ cd ../..
 
 # 5. Create Caddyfile for HTTPS
 cat > Caddyfile << 'EOF'
-your-domain.example.com {
-    reverse_proxy frontend:3000
+example.d6e.ai {
+	# SvelteKit-served API routes (skills docs). Must come before the general /api/v1 block.
+	handle /api/v1/skills/* {
+		reverse_proxy frontend:3000
+	}
+
+	# Rust API (e.g. same-origin /api/v1/.../files/.../download). Must not hit SvelteKit.
+	handle /api/v1/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
 }
 EOF
+# Replace example.d6e.ai with your domain; set ORIGIN=https://<your-domain> in .env.
 
 # 6. Start services
 docker compose up -d
 ```
+
+Replace `example.d6e.ai` with your real hostname (DNS must point to this server). Caddy still obtains and renews Let’s Encrypt certificates without any extra TLS configuration. Optionally add a line `tls you@example.com` inside the site block to register an ACME contact email with Let’s Encrypt (certificate expiry notices, account issues); omit it if you do not need that.
 
 ## Documentation
 
