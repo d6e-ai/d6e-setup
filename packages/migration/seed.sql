@@ -225,9 +225,15 @@ CREATE TABLE IF NOT EXISTS frontend.chat_session (
     workspace_id UUID NOT NULL,
     title TEXT,
     messages JSONB NOT NULL DEFAULT '[]',
+    sns_source TEXT,
+    external_conversation_key TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_frontend_chat_session_sns_external
+    ON frontend.chat_session (workspace_id, sns_source, external_conversation_key)
+    WHERE sns_source IS NOT NULL AND external_conversation_key IS NOT NULL;
 
 -- SaaS credential storage (encrypted OAuth tokens and API keys)
 CREATE TABLE IF NOT EXISTS frontend.saas_credential (
@@ -285,6 +291,158 @@ CREATE INDEX IF NOT EXISTS idx_frontend_llm_usage_workspace ON frontend.llm_usag
 CREATE INDEX IF NOT EXISTS idx_frontend_llm_usage_user ON frontend.llm_usage(user_id);
 CREATE INDEX IF NOT EXISTS idx_frontend_llm_usage_created_at ON frontend.llm_usage(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_frontend_llm_usage_provider_model ON frontend.llm_usage(provider, model);
+
+-- ============================================================================
+-- Contract & AI Credit Usage
+-- ============================================================================
+
+-- Plan definition master table (credit-based billing)
+CREATE TABLE IF NOT EXISTS frontend.plan_definition (
+    plan_type TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    max_users INTEGER,
+    credit_limit_daily BIGINT,
+    credit_limit_weekly BIGINT,
+    credit_limit_monthly BIGINT,
+    price_monthly INTEGER,
+    price_annual INTEGER,
+    price_biennial INTEGER,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO frontend.plan_definition
+    (plan_type, display_name, max_users, credit_limit_daily, credit_limit_weekly, credit_limit_monthly, price_monthly, price_annual, price_biennial, is_active)
+VALUES
+    ('basic',      'Basic',      5,    75000,   375000,   1500000,  55000,  605000,  1155000, true),
+    ('standard',   'Standard',   15,   200000,  1000000,  4000000,  110000, 1210000, 2310000, true),
+    ('premium',    'Premium',    50,   500000,  2500000,  10000000, 220000, 2420000, 4620000, true),
+    ('enterprise', 'Enterprise', NULL, NULL,    NULL,     NULL,     NULL,   NULL,    NULL,    true)
+ON CONFLICT (plan_type) DO NOTHING;
+
+-- Model pricing for credit calculation
+CREATE TABLE IF NOT EXISTS frontend.model_pricing (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    provider TEXT NOT NULL,
+    model_pattern TEXT NOT NULL,
+    input_price_per_mtok NUMERIC(10, 4),
+    output_price_per_mtok NUMERIC(10, 4),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(provider, model_pattern)
+);
+
+INSERT INTO frontend.model_pricing
+    (provider, model_pattern, input_price_per_mtok, output_price_per_mtok)
+VALUES
+    -- Anthropic (must match model-selector.svelte exactly)
+    ('anthropic', 'claude-opus-4-6',    5.00,  25.00),
+    ('anthropic', 'claude-sonnet-4-6',  3.00,  15.00),
+    ('anthropic', 'claude-sonnet-4-5',  3.00,  15.00),
+    ('anthropic', 'claude-haiku-4-5',   1.00,   5.00),
+    -- OpenAI
+    ('openai',    'gpt-5.4',            2.50,  15.00),
+    ('openai',    'gpt-5.4-mini',      0.75,   4.50),
+    ('openai',    'gpt-5.4-nano',      0.10,   0.40),
+    -- Google
+    ('google',    'gemini-3-flash-preview', 0.15, 0.60),
+    ('google',    'gemini-3-pro-preview',  1.25, 10.00),
+    -- LM Studio / Ollama (local, free)
+    ('lmstudio',  '*',                  0.00,   0.00),
+    ('ollama',    '*',                  0.00,   0.00)
+ON CONFLICT (provider, model_pattern) DO UPDATE SET
+    input_price_per_mtok  = EXCLUDED.input_price_per_mtok,
+    output_price_per_mtok = EXCLUDED.output_price_per_mtok,
+    updated_at            = NOW();
+
+CREATE TABLE IF NOT EXISTS frontend.contract (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    name TEXT NOT NULL,
+    max_users INTEGER,
+    plan_type TEXT REFERENCES frontend.plan_definition(plan_type),
+    credit_limit_daily BIGINT,
+    credit_limit_weekly BIGINT,
+    credit_limit_monthly BIGINT,
+    billing_period TEXT,
+    price_amount INTEGER,
+    starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS frontend.contract_workspace (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    contract_id UUID NOT NULL REFERENCES frontend.contract(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(workspace_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_frontend_contract_workspace_workspace
+    ON frontend.contract_workspace(workspace_id);
+
+CREATE TABLE IF NOT EXISTS frontend.contract_user (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    contract_id UUID NOT NULL REFERENCES frontend.contract(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(contract_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_contract_user_user_id
+    ON frontend.contract_user(user_id);
+CREATE INDEX IF NOT EXISTS idx_contract_user_contract_id
+    ON frontend.contract_user(contract_id);
+
+CREATE TABLE IF NOT EXISTS frontend.token_usage_counter (
+    contract_id UUID NOT NULL REFERENCES frontend.contract(id) ON DELETE CASCADE,
+    period_type TEXT NOT NULL,
+    period_key TEXT NOT NULL,
+    total_tokens BIGINT NOT NULL DEFAULT 0,
+    total_credits BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (contract_id, period_type, period_key)
+);
+
+-- Link llm_usage to contracts (ALTER since llm_usage is created before contract)
+ALTER TABLE frontend.llm_usage
+    ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES frontend.contract(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_frontend_llm_usage_contract
+    ON frontend.llm_usage(contract_id);
+
+CREATE INDEX IF NOT EXISTS idx_frontend_llm_usage_contract_created
+    ON frontend.llm_usage(contract_id, created_at DESC);
+
+-- Invoice table for billing support
+CREATE TABLE IF NOT EXISTS frontend.invoice (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    contract_id UUID NOT NULL REFERENCES frontend.contract(id) ON DELETE CASCADE,
+    invoice_number TEXT NOT NULL UNIQUE,
+    billing_period_start DATE NOT NULL,
+    billing_period_end DATE NOT NULL,
+    plan_type TEXT,
+    plan_name TEXT NOT NULL,
+    subtotal INTEGER NOT NULL,
+    tax_rate NUMERIC(5, 2) NOT NULL DEFAULT 10.00,
+    tax_amount INTEGER NOT NULL,
+    total_amount INTEGER NOT NULL,
+    notes TEXT,
+    issued_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_frontend_invoice_contract
+    ON frontend.invoice(contract_id);
+
+-- Invoice number counter (monthly reset)
+CREATE TABLE IF NOT EXISTS frontend.invoice_counter (
+    year_month TEXT PRIMARY KEY,
+    last_number INTEGER NOT NULL DEFAULT 0
+);
 
 -- ============================================================================
 -- Pinned Charts (Dashboard saved charts)
@@ -359,6 +517,8 @@ CREATE TABLE IF NOT EXISTS frontend.user_workspace_settings (
     verification_model TEXT NOT NULL DEFAULT 'claude-haiku-4-5',
     mcp_timeout_ms INTEGER NOT NULL DEFAULT 300000,
     sql_approval_mode TEXT NOT NULL DEFAULT 'write_only',
+    memory_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    memory_limit INTEGER NOT NULL DEFAULT 100,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_id, workspace_id)
@@ -366,6 +526,29 @@ CREATE TABLE IF NOT EXISTS frontend.user_workspace_settings (
 
 CREATE INDEX IF NOT EXISTS idx_user_workspace_settings_workspace 
     ON frontend.user_workspace_settings(workspace_id);
+
+-- ============================================================================
+-- User Memory (per-user, per-workspace persistent memory from conversations)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS frontend.user_memory (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    user_id UUID NOT NULL,
+    workspace_id UUID NOT NULL,
+    content TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'preference',
+    source_session_id UUID,
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_user_memory_content
+    ON frontend.user_memory (user_id, workspace_id, content_hash);
+
+CREATE INDEX IF NOT EXISTS ix_user_memory_user_workspace
+    ON frontend.user_memory (user_id, workspace_id, updated_at DESC);
 
 -- Table column order - stores per-user, per-workspace, per-table column display order
 CREATE TABLE IF NOT EXISTS frontend.table_column_order (
