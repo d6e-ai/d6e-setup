@@ -1,6 +1,6 @@
 services:
   api:
-    image: registry.gitlab.com/d6e-ai/d6e-setup/api:latest
+    image: registry.gitlab.com/cauchye/d6e-ai/d6e-setup/api:latest
     restart: always
     env_file: .env
     ports:
@@ -14,7 +14,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   mcp:
-    image: registry.gitlab.com/d6e-ai/d6e-setup/mcp:latest
+    image: registry.gitlab.com/cauchye/d6e-ai/d6e-setup/mcp:latest
     restart: always
     env_file: .env
     ports:
@@ -26,7 +26,7 @@ services:
       - api
 
   frontend:
-    image: registry.gitlab.com/d6e-ai/d6e-setup/frontend:latest
+    image: registry.gitlab.com/cauchye/d6e-ai/d6e-setup/frontend:latest
     restart: always
     env_file: .env
     ports:
