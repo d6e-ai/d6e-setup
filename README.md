@@ -5,8 +5,8 @@ Configuration files and database schema for deploying [D6E](https://github.com/d
 ## Contents
 
 ```
-.env.example                          # Environment variables template
-compose.yml                           # Docker Compose (external DB, Caddy HTTPS)
+.env.example                          # Environment variables template (incl. STF Docker)
+compose.yml                           # Docker Compose (external DB, Caddy HTTPS; API mounts docker.sock for STF)
 packages/migration/
   seed.sql                            # Database schema
   scripts/
@@ -25,6 +25,8 @@ cd d6e-setup
 cp .env.example .env
 # Edit .env — set DATABASE_URL, D6E_CONTAINER_TOKEN_SECRET, ORIGIN,
 # D6E_AUTH_CLIENT_ID, D6E_AUTH_CLIENT_SECRET
+# Optional: tune STF Docker execution (STF_DOCKER_MAX_CONCURRENT,
+# STF_DOCKER_TIMEOUT_SECS, resource limits) — see .env.example
 
 # 3. Apply database schema
 psql $DATABASE_URL < packages/migration/seed.sql
