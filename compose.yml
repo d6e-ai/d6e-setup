@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/d6e-ai/d6e/api:latest
+    image: ghcr.io/d6e-ai/d6e-api:latest
     restart: always
     env_file: .env
     ports:
@@ -14,7 +14,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   mcp:
-    image: ghcr.io/d6e-ai/d6e/mcp:latest
+    image: ghcr.io/d6e-ai/d6e-mcp:latest
     restart: always
     env_file: .env
     ports:
@@ -26,7 +26,7 @@ services:
       - api
 
   frontend:
-    image: ghcr.io/d6e-ai/d6e/frontend:latest
+    image: ghcr.io/d6e-ai/d6e-frontend:latest
     restart: always
     env_file: .env
     ports:
