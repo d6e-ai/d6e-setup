@@ -1,0 +1,105 @@
+services:
+  opensign-mongo:
+    image: ${OPENSIGN_MONGO_IMAGE:?OPENSIGN_MONGO_IMAGE is required}
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${OPENSIGN_MONGO_ROOT_USERNAME:?OPENSIGN_MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${OPENSIGN_MONGO_ROOT_PASSWORD:?OPENSIGN_MONGO_ROOT_PASSWORD is required}
+    volumes:
+      - opensign_mongo_data:/data/db
+    networks:
+      - opensign_internal
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet
+          --username "$$MONGO_INITDB_ROOT_USERNAME"
+          --password "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin
+          --eval "quit(db.adminCommand('ping').ok ? 0 : 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  opensign-server:
+    image: ${OPENSIGN_SERVER_IMAGE:?OPENSIGN_SERVER_IMAGE is required}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PUBLIC_URL: https://${OPENSIGN_DOMAIN:?OPENSIGN_DOMAIN is required}
+      SERVER_URL: https://${OPENSIGN_DOMAIN:?OPENSIGN_DOMAIN is required}/api/app
+      REACT_APP_APPID: opensign
+      APP_ID: opensign
+      appName: ${OPENSIGN_APP_NAME:-d6e OpenSign}
+      MASTER_KEY: ${OPENSIGN_MASTER_KEY:?OPENSIGN_MASTER_KEY is required}
+      MONGODB_URI: mongodb://${OPENSIGN_MONGO_ROOT_USERNAME:?OPENSIGN_MONGO_ROOT_USERNAME is required}:${OPENSIGN_MONGO_ROOT_PASSWORD:?OPENSIGN_MONGO_ROOT_PASSWORD is required}@opensign-mongo:27017/OpenSignDB?authSource=admin
+      PARSE_MOUNT: /app
+      USE_LOCAL: "TRUE"
+      SMTP_ENABLE: "true"
+      SMTP_HOST: ${OPENSIGN_SMTP_HOST:?OPENSIGN_SMTP_HOST is required}
+      SMTP_PORT: ${OPENSIGN_SMTP_PORT:-587}
+      SMTP_USER_EMAIL: ${OPENSIGN_SMTP_USER_EMAIL:?OPENSIGN_SMTP_USER_EMAIL is required}
+      SMTP_USERNAME: ${OPENSIGN_SMTP_USERNAME:?OPENSIGN_SMTP_USERNAME is required}
+      SMTP_PASS: ${OPENSIGN_SMTP_PASS:?OPENSIGN_SMTP_PASS is required}
+      PFX_BASE64: ${OPENSIGN_PFX_BASE64:?OPENSIGN_PFX_BASE64 is required}
+      PASS_PHRASE: ${OPENSIGN_PFX_PASSPHRASE:?OPENSIGN_PFX_PASSPHRASE is required}
+    volumes:
+      - opensign_files:/usr/src/app/files
+    networks:
+      - opensign_internal
+      - opensign_proxy
+    depends_on:
+      opensign-mongo:
+        condition: service_healthy
+
+  opensign-client:
+    image: ${OPENSIGN_CLIENT_IMAGE:?OPENSIGN_CLIENT_IMAGE is required}
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: https://${OPENSIGN_DOMAIN:?OPENSIGN_DOMAIN is required}
+      REACT_APP_SERVERURL: https://${OPENSIGN_DOMAIN:?OPENSIGN_DOMAIN is required}/api/app
+      REACT_APP_APPID: opensign
+    networks:
+      - opensign_proxy
+    depends_on:
+      - opensign-server
+
+  frontend:
+    environment:
+      ORIGIN: https://${D6E_DOMAIN:?D6E_DOMAIN is required}
+
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      D6E_DOMAIN: ${D6E_DOMAIN:?D6E_DOMAIN is required}
+      OPENSIGN_DOMAIN: ${OPENSIGN_DOMAIN:?OPENSIGN_DOMAIN is required}
+      TLS_EMAIL: ${TLS_EMAIL:?TLS_EMAIL is required}
+    volumes:
+      - ./opensign/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - default
+      - opensign_proxy
+    depends_on:
+      - frontend
+      - opensign-client
+      - opensign-server
+
+networks:
+  opensign_internal:
+    internal: true
+  opensign_proxy:
+
+volumes:
+  caddy_data:
+  caddy_config:
+  opensign_mongo_data:
+  opensign_files:

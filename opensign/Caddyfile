@@ -1,0 +1,27 @@
+{$D6E_DOMAIN} {
+	tls {$TLS_EMAIL}
+
+	handle /api/v1/skills/* {
+		reverse_proxy frontend:3000
+	}
+
+	handle /api/v1/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
+
+{$OPENSIGN_DOMAIN} {
+	tls {$TLS_EMAIL}
+
+	handle_path /api/* {
+		reverse_proxy opensign-server:8080
+	}
+
+	handle {
+		reverse_proxy opensign-client:3000
+	}
+}
