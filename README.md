@@ -7,6 +7,8 @@ Configuration files and database schema for deploying [D6E](https://github.com/d
 ```
 .env.example                          # Environment variables template (incl. STF Docker)
 compose.yml                           # Docker Compose (external DB, Caddy HTTPS; API mounts docker.sock for STF)
+opensign/                             # Optional same-VPS OpenSign Compose overlay
+docs/opensign-compose.md              # OpenSign operations guide
 packages/migration/
   seed.sql                            # Database schema
   scripts/
@@ -66,6 +68,9 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 ## Documentation
 
 For detailed setup instructions, see [D6E Setup Skills](https://github.com/d6e-ai/d6e-setup-skills).
+
+To run OpenSign beside D6E on the same VPS, see
+[OpenSign Compose Option](./docs/opensign-compose.md).
 
 ## License
 

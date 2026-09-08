@@ -4,4 +4,4 @@
 *~
 .env
 node_modules/
-Caddyfile
+/Caddyfile
