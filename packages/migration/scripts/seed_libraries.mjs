@@ -12,13 +12,11 @@
  *   npm install pg
  */
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-import pkg from 'pg';
-
-const { Client } = pkg;
+import { cleanupTempDir, requireDatabaseUrl, resetTempDir, withDbClient } from './seed-common.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMP_DIR = join(__dirname, '.tmp_libs');
@@ -145,34 +143,20 @@ async function main() {
 	console.log('STF Library Seeding Script');
 	console.log('==========================\n');
 
-	const databaseUrl = process.env.DATABASE_URL;
-	if (!databaseUrl) {
-		throw new Error('DATABASE_URL environment variable is required');
-	}
-
-	// Create temp directory
-	if (existsSync(TEMP_DIR)) {
-		rmSync(TEMP_DIR, { recursive: true });
-	}
-	mkdirSync(TEMP_DIR, { recursive: true });
-
-	// Connect to database
-	const client = new Client({ connectionString: databaseUrl });
-	await client.connect();
+	const databaseUrl = requireDatabaseUrl();
+	resetTempDir(TEMP_DIR);
 
 	try {
-		for (const lib of LIBRARIES) {
-			const { code, typeDefinitions } = await downloadLibrary(lib);
-			await insertLibrary(client, lib, code, typeDefinitions);
-		}
+		await withDbClient(databaseUrl, async (client) => {
+			for (const lib of LIBRARIES) {
+				const { code, typeDefinitions } = await downloadLibrary(lib);
+				await insertLibrary(client, lib, code, typeDefinitions);
+			}
+		});
 
 		console.log('\nAll libraries seeded successfully!');
 	} finally {
-		// Cleanup
-		await client.end();
-		if (existsSync(TEMP_DIR)) {
-			rmSync(TEMP_DIR, { recursive: true });
-		}
+		cleanupTempDir(TEMP_DIR);
 	}
 }
 

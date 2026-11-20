@@ -11,14 +11,12 @@
  * Requirements:
  *   npm install pg
  */
-import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
+import { createWriteStream, existsSync, readFileSync, rmSync } from 'fs';
 import { get } from 'https';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-import pkg from 'pg';
-
-const { Client } = pkg;
+import { cleanupTempDir, requireDatabaseUrl, resetTempDir, withDbClient } from './seed-common.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMP_DIR = join(__dirname, '.tmp_fonts');
@@ -106,34 +104,20 @@ async function main() {
 	console.log('Font Seeding Script');
 	console.log('===================\n');
 
-	const databaseUrl = process.env.DATABASE_URL;
-	if (!databaseUrl) {
-		throw new Error('DATABASE_URL environment variable is required');
-	}
-
-	// Create temp directory
-	if (existsSync(TEMP_DIR)) {
-		rmSync(TEMP_DIR, { recursive: true });
-	}
-	mkdirSync(TEMP_DIR, { recursive: true });
-
-	// Connect to database
-	const client = new Client({ connectionString: databaseUrl });
-	await client.connect();
+	const databaseUrl = requireDatabaseUrl();
+	resetTempDir(TEMP_DIR);
 
 	try {
-		for (const font of FONTS) {
-			const fontData = await downloadFont(font);
-			await insertFont(client, font, fontData);
-		}
+		await withDbClient(databaseUrl, async (client) => {
+			for (const font of FONTS) {
+				const fontData = await downloadFont(font);
+				await insertFont(client, font, fontData);
+			}
+		});
 
 		console.log('\nAll fonts seeded successfully!');
 	} finally {
-		// Cleanup
-		await client.end();
-		if (existsSync(TEMP_DIR)) {
-			rmSync(TEMP_DIR, { recursive: true });
-		}
+		cleanupTempDir(TEMP_DIR);
 	}
 }
 
