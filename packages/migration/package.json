@@ -1,0 +1,13 @@
+{
+	"name": "d6e-migration",
+	"version": "1.0.0",
+	"type": "module",
+	"description": "Database migration and seeding scripts for d6e",
+	"scripts": {
+		"seed:libraries": "node scripts/seed_libraries.mjs",
+		"seed:fonts": "node scripts/seed_fonts.mjs"
+	},
+	"dependencies": {
+		"pg": "^8.16.0"
+	}
+}

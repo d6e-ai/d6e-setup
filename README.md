@@ -5,16 +5,21 @@ Configuration files and database schema for deploying [D6E](https://github.com/d
 ## Contents
 
 ```
-.env.example                          # Environment variables template (incl. STF Docker)
+.env.example                          # Environment variables template (STF Docker, local LLMs, voice, console origins)
 compose.yml                           # Docker Compose (external DB, Caddy HTTPS; API mounts docker.sock for STF)
 opensign/                             # Optional same-VPS OpenSign Compose overlay
 docs/opensign-compose.md              # OpenSign operations guide
 packages/migration/
-  seed.sql                            # Database schema
+  seed.sql                            # Database schema for a fresh database
+  migrations/                         # Incremental migrations (001–078) for an existing database
   scripts/
     seed_fonts.mjs                    # Seed font data for PDF generation
     seed_libraries.mjs                # Seed JS libraries for STF execution
 ```
+
+## Versions
+
+These files match **D6E v1.2.2**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.2.2`.
 
 ## Quick Start
 
@@ -34,9 +39,9 @@ cp .env.example .env
 psql $DATABASE_URL < packages/migration/seed.sql
 
 # 4. Apply seed data (requires Node.js)
-cd packages/migration && npm install pg
-DATABASE_URL="..." node scripts/seed_fonts.mjs
-DATABASE_URL="..." node scripts/seed_libraries.mjs
+cd packages/migration && npm install
+DATABASE_URL="..." npm run seed:fonts
+DATABASE_URL="..." npm run seed:libraries
 cd ../..
 
 # 5. Create Caddyfile for HTTPS
@@ -64,6 +69,12 @@ docker compose up -d
 ```
 
 Replace `example.d6e.ai` with your real hostname (DNS must point to this server). Caddy still obtains and renews Let’s Encrypt certificates without any extra TLS configuration. Optionally add a line `tls you@example.com` inside the site block to register an ACME contact email with Let’s Encrypt (certificate expiry notices, account issues); omit it if you do not need that.
+
+## Upgrading
+
+1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
+2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
+3. Pull and restart the images: `docker compose pull && docker compose up -d`.
 
 ## Documentation
 
