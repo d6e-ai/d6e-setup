@@ -1,6 +1,6 @@
 # Database schema and seed scripts
 
-The SQL schema and seed data of D6E, copied from the D6E release named in the top-level [README](../../README.md) (currently v1.5.0; the schema did not change from v1.3.0).
+The SQL schema and seed data of D6E, copied from the D6E release named in the top-level [README](../../README.md) (currently v1.6.0; the schema did not change from v1.3.0).
 
 ## Layout
 
