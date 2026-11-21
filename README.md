@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v1.7.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.7.0`.
+These files match **D6E v1.8.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.8.0`.
 
 ## Quick Start
 
@@ -75,6 +75,8 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
+
+From v1.7.0 to v1.8.0 there is no database change either: pull and restart the images (step 3). v1.8.0 adds the APIs that let the D6E console list the built-in skills, show the workspace's completed tasks (its AI chat sessions) and show its AI usage.
 
 From v1.6.0 to v1.7.0 there is no database change either: pull and restart the images (step 3). v1.7.0 adds the APIs that let the D6E console show the calls of the last 30 days and the installed plugins of a workspace, and let workspace admins set the default model and the workspace's d6e AI Gateway key there.
 
