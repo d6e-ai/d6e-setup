@@ -1,0 +1,18 @@
+-- Policy groups can include workspace members by role, so one group can cover every current and
+-- future member without listing user ids.
+--   member_roles  workspace roles whose members belong to the group, in addition to user_ids.
+--                 '{}' (default): only user_ids, as before. '{admin,member}': every member of the
+--                 group's workspace. '{admin}': every admin.
+-- Membership is read whenever a policy, DDL or editor permission is evaluated, so a person who
+-- joins is included at once (no user id to add beforehand) and a person who leaves is excluded at
+-- once. STFs still belong only through stf_ids. Existing groups keep '{}' and behave as before.
+--
+-- With this release the API also ignores a policy group of another workspace (a policy, or the
+-- workspace's DDL / workflow editor / policy editor group, that points at it). Count such
+-- references first (read-only; expected 0 each):
+--   SELECT count(*) FROM policy p JOIN policy_group g ON g.id = p.policy_group_id
+--   WHERE p.deleted_at IS NULL AND g.workspace_id <> p.workspace_id;
+--   SELECT count(*) FROM workspace w JOIN policy_group g ON g.id IN
+--     (w.ddl_policy_group_id, w.workflow_editor_policy_group_id, w.policy_editor_policy_group_id)
+--   WHERE g.workspace_id <> w.id;
+ALTER TABLE policy_group ADD COLUMN IF NOT EXISTS member_roles workspace_role[] NOT NULL DEFAULT '{}';

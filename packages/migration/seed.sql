@@ -2620,3 +2620,8 @@ ALTER TABLE voice_agent_setting ADD COLUMN IF NOT EXISTS outbound_post_call_work
 ALTER TABLE voice_agent_setting ADD COLUMN IF NOT EXISTS outbound_opening TEXT
     CHECK (char_length(outbound_opening) BETWEEN 1 AND 1000);
 ALTER TABLE voice_agent_setting ADD COLUMN IF NOT EXISTS outbound_separate BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Mirror of packages/migration/migrations/080_add_policy_group_member_roles.sql.
+-- member_roles: workspace roles whose members belong to the group, in addition to user_ids.
+-- '{}' (default): only user_ids. '{admin,member}': every member. '{admin}': every admin.
+ALTER TABLE policy_group ADD COLUMN IF NOT EXISTS member_roles workspace_role[] NOT NULL DEFAULT '{}';

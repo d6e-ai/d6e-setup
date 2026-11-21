@@ -11,7 +11,7 @@ opensign/                             # Optional same-VPS OpenSign Compose overl
 docs/opensign-compose.md              # OpenSign operations guide
 packages/migration/
   seed.sql                            # Database schema for a fresh database
-  migrations/                         # Incremental migrations (001–078) for an existing database
+  migrations/                         # Incremental migrations (001–080) for an existing database
   scripts/
     seed_fonts.mjs                    # Seed font data for PDF generation
     seed_libraries.mjs                # Seed JS libraries for STF execution
@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v1.2.2**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.2.2`.
+These files match **D6E v1.3.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.2.2`.
 
 ## Quick Start
 
@@ -75,6 +75,11 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
+
+From v1.2.x to v1.3.0, use this order instead of steps 2–3:
+1. Apply `080_add_policy_group_member_roles.sql` first. It only adds a column, so the running API is not affected, and the v1.3.0 API needs it.
+2. Pull and restart the images.
+3. Right after that, apply `079_prefix_user_data_constraint_names.sql`. It renames older named constraints to the workspace-prefixed form that v1.3.0 uses. If a new name is already taken, it stops and renames nothing; the header of the file explains how to check first.
 
 ## Documentation
 
