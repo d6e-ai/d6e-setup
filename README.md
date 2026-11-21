@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v1.4.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.4.0`.
+These files match **D6E v1.5.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.5.0`.
 
 ## Quick Start
 
@@ -75,6 +75,8 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
+
+From v1.4.0 to v1.5.0 there is no database change either: pull and restart the images (step 3). v1.5.0 adds the API that lets the D6E console connect OAuth SaaS providers to a workspace through D6E Auth.
 
 From v1.3.0 to v1.4.0 there is no database change: pull and restart the images (step 3). v1.4.0 changes some permissions and checks:
 - Creating, changing and deleting STFs and effects, creating their versions, and setting or deleting STF secrets are for workspace admins; other members get `403` (they still read and run them).
