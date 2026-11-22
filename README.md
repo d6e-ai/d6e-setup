@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v1.9.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v1.9.0`.
+These files match **D6E v2.0.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.0.0`.
 
 ## Quick Start
 
@@ -75,6 +75,8 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
+
+From v1.9.0 to v2.0.0 there is no database change. Add `D6E_CONSOLE_URL=https://www.d6e.ai` to `.env` (step 1, as in `.env.example`), then pull and restart the images (step 3). v2.0.0 is a major release: with `D6E_CONSOLE_URL` set, the frontend's management pages (workspaces, runs, data, workflows, settings, Voice and the rest) send people to the same page in the D6E console (www.d6e.ai), where the server is found by its origin. The AI chat (`/workspaces/<id>/agents`), `/admin`, sign-in and `/api` stay on this server. Without the line, nothing changes. Only `d6e-frontend` is a new image.
 
 From v1.8.0 to v1.9.0 there is no database change either: pull and restart the images (step 3). v1.9.0 adds the APIs that let workspace admins install skills from a file or a URL, manage the workspace's billing and install, update and remove plugins in the D6E console, and let every member keep their own column order of a table. The plugin APIs read `MARKETPLACE_REGISTRY_URL`, which `.env` already sets.
 
