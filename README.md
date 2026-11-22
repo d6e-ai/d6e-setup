@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v3.0.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v3.0.0`.
+These files match **D6E v2.1.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.1.0`.
 
 ## Quick Start
 
@@ -76,7 +76,7 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
 
-From v2.0.0 to v3.0.0 there is no database change: pull and restart the images (step 3). v3.0.0 is a major release: the frontend no longer has the management pages (workspaces, runs, data, workflows, settings, Voice and the rest), which live only in the D6E console (www.d6e.ai). Their addresses always go there, with or without `D6E_CONSOLE_URL` (unset means `D6E_AUTH_URL`). The AI chat (`/workspaces/<id>/agents`), `/admin`, sign-in and `/api` stay on this server. Only `d6e-frontend` is a new image.
+From v2.0.0 to v2.1.0 there is no database change: pull and restart the images (step 3). Since v2.1.0 the frontend no longer has the management pages (workspaces, runs, data, workflows, settings, Voice and the rest), which live only in the D6E console (www.d6e.ai). Their addresses always go there, with or without `D6E_CONSOLE_URL` (unset means `D6E_AUTH_URL`). The AI chat (`/workspaces/<id>/agents`), `/admin`, sign-in and `/api` stay on this server. Only `d6e-frontend` is a new image.
 
 From v1.9.0 to v2.0.0 there is no database change. Add `D6E_CONSOLE_URL=https://www.d6e.ai` to `.env` (step 1, as in `.env.example`), then pull and restart the images (step 3). v2.0.0 is a major release: with `D6E_CONSOLE_URL` set, the frontend's management pages (workspaces, runs, data, workflows, settings, Voice and the rest) send people to the same page in the D6E console (www.d6e.ai), where the server is found by its origin. The AI chat (`/workspaces/<id>/agents`), `/admin`, sign-in and `/api` stay on this server. Without the line, nothing changes. Only `d6e-frontend` is a new image.
 
