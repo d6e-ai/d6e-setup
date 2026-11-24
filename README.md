@@ -5,13 +5,13 @@ Configuration files and database schema for deploying [D6E](https://github.com/d
 ## Contents
 
 ```
-.env.example                          # Environment variables template (STF Docker, local LLMs, voice, console origins)
+.env.example                          # Environment variables template (STF Docker, voice, console origins)
 compose.yml                           # Docker Compose (external DB, Caddy HTTPS; API mounts docker.sock for STF)
 opensign/                             # Optional same-VPS OpenSign Compose overlay
 docs/opensign-compose.md              # OpenSign operations guide
 packages/migration/
   seed.sql                            # Database schema for a fresh database
-  migrations/                         # Incremental migrations (001–080) for an existing database
+  migrations/                         # Incremental migrations (001–081) for an existing database
   scripts/
     seed_fonts.mjs                    # Seed font data for PDF generation
     seed_libraries.mjs                # Seed JS libraries for STF execution
@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v2.1.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.1.0`.
+These files match **D6E v2.2.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.2.0`.
 
 ## Quick Start
 
@@ -75,6 +75,8 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
+
+From v2.1.0 to v2.2.0, apply `081_reset_removed_local_llm_providers.sql` (step 2), then pull and restart the images (step 3). v2.2.0 removes Ollama and LM Studio: the web app and the API no longer offer them, and the AI chat no longer connects to a model URL sent in a request. The migration changes only data: a workspace default model or a personal verification model that still names `ollama` or `lmstudio` goes back to the default (`openai` `gpt-6-luna` for the workspace, `anthropic` `claude-haiku-5-5` for verification). You can delete `OLLAMA_*` and `LM_STUDIO_*` from `.env`; nothing reads them. `d6e-api` and `d6e-frontend` are new images.
 
 From v2.0.0 to v2.1.0 there is no database change: pull and restart the images (step 3). Since v2.1.0 the frontend no longer has the management pages (workspaces, runs, data, workflows, settings, Voice and the rest), which live only in the D6E console (www.d6e.ai). Their addresses always go there, with or without `D6E_CONSOLE_URL` (unset means `D6E_AUTH_URL`). The AI chat (`/workspaces/<id>/agents`), `/admin`, sign-in and `/api` stay on this server. Only `d6e-frontend` is a new image.
 
