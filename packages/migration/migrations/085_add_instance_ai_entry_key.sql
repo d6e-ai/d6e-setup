@@ -1,4 +1,4 @@
--- This server's own D6E AI key for the AI entry (gateway.d6e.ai). The server
+-- This server's own D6E AI key for the D6E AI entry (run by d6e.ai). The server
 -- takes it from d6e.ai with its client credentials (POST /api/v1/ai/server-key)
 -- when it has none or the entry refuses the one it has, and keeps it here,
 -- encrypted with SAAS_CREDENTIAL_ENCRYPTION_KEY (the format of
