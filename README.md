@@ -11,7 +11,7 @@ opensign/                             # Optional same-VPS OpenSign Compose overl
 docs/opensign-compose.md              # OpenSign operations guide
 packages/migration/
   seed.sql                            # Database schema for a fresh database
-  migrations/                         # Incremental migrations (001–081) for an existing database
+  migrations/                         # Incremental migrations (001–085) for an existing database
   scripts/
     seed_fonts.mjs                    # Seed font data for PDF generation
     seed_libraries.mjs                # Seed JS libraries for STF execution
@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v2.2.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.2.0`.
+These files match **D6E v2.3.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.3.0`.
 
 ## Quick Start
 
@@ -75,6 +75,8 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
+
+From v2.2.0 to v2.3.0, apply `082_add_voice_call_request_destination_kind.sql`, `083_add_voice_session_openai_key_source.sql`, `084_add_voice_usage_report.sql` and `085_add_instance_ai_entry_key.sql` in this order (step 2; they only add columns and tables), then pull and restart the images (step 3). v2.3.0 sends every AI call (chat, workflows, embeddings, transcription and web search) to the AI entry run by d6e.ai (`D6E_AI_ENTRY_URL`, default `https://gateway.d6e.ai`), which bills a D6E wallet. The key is the workspace's own D6E key (set in the D6E console) or, otherwise, this server's own key, which the server takes from d6e.ai with `D6E_AUTH_CLIENT_ID` and `D6E_AUTH_CLIENT_SECRET` and keeps encrypted with `SAAS_CREDENTIAL_ENCRYPTION_KEY`; all three must be set. Delete `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL`, `D6E_AI_GATEWAY_BASE_URL` and `TAVILY_API_KEY` from `.env`: nothing reads them, and the API logs a warning while one of the first three is set. `D6E_AI_FAST_MODEL` and `D6E_AI_SMART_MODEL` optionally choose the default models (see `.env.example`). A workspace key that is not a D6E key (`d6e_ai_live_…`) is refused by the entry, and that workspace's AI calls fail until a D6E key is set for it in the D6E console. To report voice usage to d6e.ai, set `D6E_VOICE_USAGE_REPORT_SINCE` to the time of the upgrade; if this server runs `d6e-voice-agent` (LiveKit), upgrade the agent first and set the time after it is up (see `.env.example`). `d6e-api`, `d6e-frontend` and `d6e-voice-agent` are new images.
 
 From v2.1.0 to v2.2.0, apply `081_reset_removed_local_llm_providers.sql` (step 2), then pull and restart the images (step 3). v2.2.0 removes Ollama and LM Studio: the web app and the API no longer offer them, and the AI chat no longer connects to a model URL sent in a request. The migration changes only data: a workspace default model or a personal verification model that still names `ollama` or `lmstudio` goes back to the default (`openai` `gpt-6-luna` for the workspace, `anthropic` `claude-haiku-5-5` for verification). You can delete `OLLAMA_*` and `LM_STUDIO_*` from `.env`; nothing reads them. `d6e-api` and `d6e-frontend` are new images.
 
