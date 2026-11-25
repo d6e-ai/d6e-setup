@@ -1,6 +1,6 @@
 # Database schema and seed scripts
 
-The SQL schema and seed data of D6E, copied from the D6E release named in the top-level [README](../../README.md) (currently v2.3.0; migrations 082–085 of v2.3.0 add columns and tables, and migration 081 of v2.2.0 changes only data).
+The SQL schema and seed data of D6E, copied from the D6E release named in the top-level [README](../../README.md) (currently v2.3.1, which has no schema change; migrations 082–085 of v2.3.0 add columns and tables, and migration 081 of v2.2.0 changes only data).
 
 ## Layout
 
