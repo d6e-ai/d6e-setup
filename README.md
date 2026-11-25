@@ -11,7 +11,7 @@ opensign/                             # Optional same-VPS OpenSign Compose overl
 docs/opensign-compose.md              # OpenSign operations guide
 packages/migration/
   seed.sql                            # Database schema for a fresh database
-  migrations/                         # Incremental migrations (001–085) for an existing database
+  migrations/                         # Incremental migrations (001–086) for an existing database
   scripts/
     seed_fonts.mjs                    # Seed font data for PDF generation
     seed_libraries.mjs                # Seed JS libraries for STF execution
@@ -19,7 +19,7 @@ packages/migration/
 
 ## Versions
 
-These files match **D6E v2.3.1**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.3.1`.
+These files match **D6E v2.4.0**. `compose.yml` uses the `latest` images, which point to the newest D6E release (`ghcr.io/d6e-ai/d6e-api`, `d6e-mcp`, `d6e-frontend`). To stay on one version, replace `latest` with a release tag such as `v2.4.0`.
 
 ## Quick Start
 
@@ -75,6 +75,8 @@ Replace `example.d6e.ai` with your real hostname (DNS must point to this server)
 1. Pull this repository (`git pull`) and compare `.env.example` with your `.env` for new settings.
 2. Apply the new files in `packages/migration/migrations/` in numeric order (only the ones you have not applied yet), for example `psql "$DATABASE_URL" -f packages/migration/migrations/078_add_voice_outbound_workflows.sql`.
 3. Pull and restart the images: `docker compose pull && docker compose up -d`.
+
+From v2.3.1 to v2.4.0, apply `086_workspace_default_reasoning_effort_and_sonnet_5_5.sql` (step 2), then pull and restart the images (step 3); `.env` does not change. v2.4.0 adds a reasoning effort to each workspace's default model, chosen with the model on the first page of the workspace's settings in the D6E console, and the chat follows the workspace's default. New workspaces start on Claude Sonnet 5.5 (`D6E_AI_SMART_MODEL` defaults to `anthropic/claude-sonnet-5-5`); existing workspaces keep the model they use, because the migration writes the previous default (`openai/gpt-6-luna`, standard, `auto`) into every workspace that has not saved one. It only adds columns and rows, so the v2.3.1 images keep working with it. Text files are now embedded as text. `d6e-api` and `d6e-frontend` are new images.
 
 From v2.3.0 to v2.3.1 there is no database change: pull and restart the images (step 3). v2.3.1 sends AI calls to the D6E AI entry at its new address, `https://www.d6e.ai` (calls go to `https://www.d6e.ai/v1/...`). If `.env` sets `D6E_AI_ENTRY_URL` to the previous entry host, delete the line or set it to `https://www.d6e.ai`. Keep `D6E_VOICE_USAGE_REPORT_SINCE` as it is. `d6e-api` and `d6e-frontend` are new images.
 
