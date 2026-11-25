@@ -625,12 +625,16 @@ CREATE TABLE IF NOT EXISTS frontend.workspace_title_rule (
 
 CREATE TABLE IF NOT EXISTS frontend.workspace_default_models (
     workspace_id  UUID PRIMARY KEY REFERENCES workspace(id) ON DELETE CASCADE,
-    chat_provider TEXT NOT NULL DEFAULT 'openai',
-    chat_model    TEXT NOT NULL DEFAULT 'gpt-6-luna',
+    chat_provider TEXT NOT NULL DEFAULT 'anthropic',
+    chat_model    TEXT NOT NULL DEFAULT 'claude-sonnet-5-5',
     chat_service_tier TEXT NOT NULL DEFAULT 'standard',
-    sns_provider  TEXT NOT NULL DEFAULT 'openai',
-    sns_model     TEXT NOT NULL DEFAULT 'gpt-6-luna',
+    chat_reasoning_effort TEXT NOT NULL DEFAULT 'auto'
+        CHECK (chat_reasoning_effort IN ('auto', 'low', 'medium', 'high', 'xhigh', 'max')),
+    sns_provider  TEXT NOT NULL DEFAULT 'anthropic',
+    sns_model     TEXT NOT NULL DEFAULT 'claude-sonnet-5-5',
     sns_service_tier TEXT NOT NULL DEFAULT 'standard',
+    sns_reasoning_effort TEXT NOT NULL DEFAULT 'auto'
+        CHECK (sns_reasoning_effort IN ('auto', 'low', 'medium', 'high', 'xhigh', 'max')),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
